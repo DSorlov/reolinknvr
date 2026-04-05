@@ -249,30 +249,23 @@ class ReolinkNvrApi:
         except Exception:
             _LOGGER.debug("Could not get IR state for ch %d", channel)
 
-        # PTZ
-        try:
-            result = await self._api_call("PtzCheck", {"channel": channel})
-            if result[0].get("code") == 0:
-                ch_info.ptz_supported = True
-                await self._load_ptz_presets(channel)
-        except Exception:
-            _LOGGER.debug("PTZ not available for ch %d", channel)
-
-        ch_info._extras_discovered = True
-
-    async def _load_ptz_presets(self, channel: int) -> None:
-        """Load PTZ presets for a channel."""
-        ch_info = self.channels[channel]
+        # PTZ — detect by checking presets (read-only, doesn't move the camera)
+        # PtzCheck physically moves the motor so we must NOT use it.
         try:
             result = await self._api_call("GetPtzPreset", {"channel": channel})
-            presets = result[0]["value"].get("PtzPreset", [])
-            ch_info.ptz_presets = {
+            presets = result[0].get("value", {}).get("PtzPreset", [])
+            enabled = {
                 p["id"]: p["name"]
                 for p in presets
                 if p.get("enable", 0) == 1 and p.get("name")
             }
+            if enabled:
+                ch_info.ptz_supported = True
+                ch_info.ptz_presets = enabled
         except Exception:
-            _LOGGER.debug("Could not load PTZ presets for ch %d", channel)
+            _LOGGER.debug("Could not check PTZ presets for ch %d", channel)
+
+        ch_info._extras_discovered = True
 
     # --- State polling ---
 
