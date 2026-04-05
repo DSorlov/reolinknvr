@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from homeassistant.components.camera import Camera, CameraEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -89,22 +89,28 @@ class ReolinkNvrCamera(ReolinkNvrEntity, Camera):
     async def stream_source(self) -> str | None:
         """Return the RTSP stream source URL.
 
-        Sub-stream is used by default for low bandwidth.
+        Uses the actual RTSP URL reported by the NVR via GetRtspUrl.
         go2rtc (built into HA) auto-converts this to WebRTC for the frontend.
         """
         entry = self.coordinator.config_entry
-        host = entry.data[CONF_HOST]
-        port = entry.data.get(CONF_PORT, 80)
         username = entry.data[CONF_USERNAME]
         password = quote(entry.data[CONF_PASSWORD], safe="")
 
-        # RTSP port is typically 554 regardless of HTTP port
-        rtsp_port = 554
+        ch_info = self.coordinator.api.channels.get(self._channel)
+        if ch_info:
+            # Use the RTSP URL from the NVR, injecting credentials
+            rtsp_url = ch_info.rtsp_sub if self._stream_quality == STREAM_SUB else ch_info.rtsp_main
+            if rtsp_url:
+                # Insert credentials: rtsp://host:port/path → rtsp://user:pass@host:port/path
+                return rtsp_url.replace("rtsp://", f"rtsp://{username}:{password}@", 1)
 
+        # Fallback: construct URL from known format
+        host = entry.data[CONF_HOST]
+        rtsp_port = self.coordinator.api.rtsp_port
         stream_type = self._stream_quality
         return (
             f"rtsp://{username}:{password}@{host}:{rtsp_port}"
-            f"/h264Preview_{self._channel + 1:02d}_{stream_type}"
+            f"/Preview_{self._channel + 1:02d}_{stream_type}"
         )
 
     async def async_camera_image(
@@ -112,7 +118,7 @@ class ReolinkNvrCamera(ReolinkNvrEntity, Camera):
     ) -> bytes | None:
         """Return a still image from the camera."""
         try:
-            return await self.coordinator.host.get_snapshot(self._channel)
+            return await self.coordinator.api.get_snapshot(self._channel)
         except Exception:
             _LOGGER.debug(
                 "Error getting snapshot for channel %d", self._channel, exc_info=True

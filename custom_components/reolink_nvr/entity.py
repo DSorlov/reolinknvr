@@ -69,6 +69,6 @@ class ReolinkNvrNvrEntity(CoordinatorEntity[ReolinkNvrCoordinator]):
             identifiers={(DOMAIN, coordinator.nvr_serial)},
             name=coordinator.nvr_name,
             manufacturer="Reolink",
-            model=coordinator.host.nvr_model if hasattr(coordinator.host, "nvr_model") else "NVR",
-            sw_version=coordinator.host.sw_version if hasattr(coordinator.host, "sw_version") else None,
+            model=coordinator.nvr_model,
+            sw_version=coordinator.nvr_sw_version,
         )

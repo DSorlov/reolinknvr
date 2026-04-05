@@ -110,17 +110,14 @@ class ReolinkPtzPresetSelect(ReolinkNvrEntity, SelectEntity):
         self._load_presets()
 
     def _load_presets(self) -> None:
-        """Load available PTZ presets from the host."""
-        try:
-            presets = self.coordinator.host.ptz_presets(self._channel)
-            if presets:
-                self._presets = {
-                    name: idx for idx, name in presets.items()
-                }
-            else:
-                # Default preset names if none configured
-                self._presets = {f"Preset {i}": i for i in range(1, 9)}
-        except (AttributeError, TypeError):
+        """Load available PTZ presets from the API."""
+        ch_info = self.coordinator.api.channels.get(self._channel)
+        if ch_info and ch_info.ptz_presets:
+            self._presets = {
+                name: idx for idx, name in ch_info.ptz_presets.items()
+                if name  # skip empty names
+            }
+        if not self._presets:
             self._presets = {f"Preset {i}": i for i in range(1, 9)}
 
     @property
@@ -140,7 +137,7 @@ class ReolinkPtzPresetSelect(ReolinkNvrEntity, SelectEntity):
             return
 
         try:
-            await self.coordinator.host.set_ptz_command(
+            await self.coordinator.api.set_ptz_command(
                 self._channel, "ToPos", preset=preset_id
             )
             self._current_option = option

@@ -107,7 +107,7 @@ class ReolinkNumber(ReolinkNvrEntity, NumberEntity):
 
         if self.entity_description.key == "volume":
             try:
-                await self.coordinator.host.set_volume(
+                await self.coordinator.api.set_volume(
                     self._channel, volume=int(value)
                 )
             except Exception:

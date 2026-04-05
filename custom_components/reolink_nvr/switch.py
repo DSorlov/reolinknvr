@@ -87,11 +87,11 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
         """Turn on the switch."""
         try:
             if self.entity_description.key == "ptz_patrol":
-                await self.coordinator.host.set_ptz_command(
+                await self.coordinator.api.set_ptz_command(
                     self._channel, "StartPatrol"
                 )
             elif self.entity_description.key == "ir_lights":
-                await self.coordinator.host.set_ir_lights(self._channel, state=True)
+                await self.coordinator.api.set_ir_lights(self._channel, state="Auto")
         except Exception:
             _LOGGER.error(
                 "Error turning on %s for channel %d",
@@ -108,11 +108,11 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
         """Turn off the switch."""
         try:
             if self.entity_description.key == "ptz_patrol":
-                await self.coordinator.host.set_ptz_command(
+                await self.coordinator.api.set_ptz_command(
                     self._channel, "StopPatrol"
                 )
             elif self.entity_description.key == "ir_lights":
-                await self.coordinator.host.set_ir_lights(self._channel, state=False)
+                await self.coordinator.api.set_ir_lights(self._channel, state="Off")
         except Exception:
             _LOGGER.error(
                 "Error turning off %s for channel %d",

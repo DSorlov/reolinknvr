@@ -6,12 +6,6 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-from reolink_aio.api import Host
-from reolink_aio.exceptions import (
-    CredentialsInvalidError,
-    ReolinkConnectionError,
-    ReolinkError,
-)
 
 from homeassistant.config_entries import (
     ConfigEntry,
@@ -22,6 +16,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
 from homeassistant.core import callback
 
+from .api import ReolinkAuthError, ReolinkConnectionError, ReolinkNvrApi, ReolinkNvrApiError
 from .const import (
     CONF_USE_HTTPS,
     DEFAULT_POLL_INTERVAL,
@@ -37,10 +32,10 @@ _LOGGER = logging.getLogger(__name__)
 USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
+        vol.Optional(CONF_PORT, default=443): int,
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Optional(CONF_USE_HTTPS, default=False): bool,
+        vol.Optional(CONF_USE_HTTPS, default=True): bool,
     }
 )
 
@@ -63,27 +58,27 @@ async def _test_connection(
     errors: dict[str, str] = {}
     unique_id: str | None = None
 
-    api_host = Host(
-        host,
-        username,
-        password,
+    api = ReolinkNvrApi(
+        host=host,
+        username=username,
+        password=password,
         port=port,
         use_https=use_https,
     )
     try:
-        await api_host.get_host_data()
-        unique_id = api_host.nvr_serial or api_host.mac_address
-    except CredentialsInvalidError:
+        await api.get_host_data()
+        unique_id = api.serial or api.mac_address
+    except ReolinkAuthError:
         errors["base"] = "invalid_auth"
     except ReolinkConnectionError:
         errors["base"] = "cannot_connect"
-    except ReolinkError:
+    except ReolinkNvrApiError:
         errors["base"] = "cannot_connect"
     except Exception:
         _LOGGER.exception("Unexpected error connecting to Reolink NVR")
         errors["base"] = "unknown"
     finally:
-        await api_host.logout()
+        await api.logout()
 
     return unique_id, errors
 

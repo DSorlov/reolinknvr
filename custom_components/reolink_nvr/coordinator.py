@@ -6,23 +6,17 @@ from datetime import datetime, timedelta, timezone
 import logging
 from typing import Any
 
-from reolink_aio.api import Host
-from reolink_aio.exceptions import (
-    CredentialsInvalidError,
-    LoginError,
-    ReolinkConnectionError,
-    ReolinkError,
-)
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api import ReolinkAuthError, ReolinkConnectionError, ReolinkNvrApi, ReolinkNvrApiError
 from .const import (
     CONF_USE_HTTPS,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_PORT,
     DOMAIN,
     EVENT_DOORBELL,
     EVENT_HDD_ERROR,
@@ -53,141 +47,74 @@ class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
             update_interval=timedelta(seconds=poll_interval),
         )
 
-        self.host = Host(
-            entry.data[CONF_HOST],
-            entry.data[CONF_USERNAME],
-            entry.data[CONF_PASSWORD],
-            port=entry.data.get(CONF_PORT, 80),
-            use_https=entry.data.get(CONF_USE_HTTPS, False),
+        use_https = entry.data.get(CONF_USE_HTTPS, True)
+        port = entry.data.get(CONF_PORT, 443 if use_https else DEFAULT_PORT)
+
+        self.api = ReolinkNvrApi(
+            host=entry.data[CONF_HOST],
+            username=entry.data[CONF_USERNAME],
+            password=entry.data[CONF_PASSWORD],
+            port=port,
+            use_https=use_https,
         )
 
-        self._push_enabled = False
         self._previous_states: dict[int, dict[str, bool]] = {}
 
     @property
     def nvr_name(self) -> str:
         """Return the NVR display name."""
-        return self.host.nvr_name or self.config_entry.data[CONF_HOST]
+        return self.api.nvr_name or self.config_entry.data[CONF_HOST]
 
     @property
     def nvr_serial(self) -> str:
         """Return the NVR serial number."""
-        return self.host.nvr_serial or self.host.mac_address or "unknown"
+        return self.api.serial or self.api.mac_address or "unknown"
+
+    @property
+    def nvr_model(self) -> str:
+        """Return the NVR model."""
+        return self.api.model
+
+    @property
+    def nvr_sw_version(self) -> str:
+        """Return the NVR firmware version."""
+        return self.api.sw_version
 
     async def async_setup(self) -> None:
-        """Set up the coordinator: login and start push events."""
+        """Set up the coordinator: login and fetch NVR data."""
         try:
-            await self.host.get_host_data()
-        except CredentialsInvalidError as err:
+            await self.api.get_host_data()
+        except ReolinkAuthError as err:
             raise ConfigEntryAuthFailed(
                 f"Invalid credentials for {self.config_entry.data[CONF_HOST]}"
             ) from err
-        except (ReolinkConnectionError, ReolinkError) as err:
+        except (ReolinkConnectionError, ReolinkNvrApiError) as err:
             raise UpdateFailed(
                 f"Error connecting to {self.config_entry.data[CONF_HOST]}: {err}"
             ) from err
 
-        # Attempt to start Baichuan TCP push for real-time events
-        await self._async_start_push()
-
-    async def _async_start_push(self) -> None:
-        """Try to subscribe to Baichuan TCP push events."""
-        try:
-            if not hasattr(self.host, "baichuan") or self.host.baichuan is None:
-                _LOGGER.debug("Baichuan not available, using polling only")
-                return
-
-            self.host.baichuan.register_callback(
-                "reolink_nvr_events", self._push_event_callback
-            )
-            await self.host.baichuan.subscribe_events()
-            self._push_enabled = True
-            _LOGGER.info(
-                "Baichuan push events enabled for %s",
-                self.config_entry.data[CONF_HOST],
-            )
-        except Exception:
-            _LOGGER.debug(
-                "Baichuan push not available for %s, falling back to polling",
-                self.config_entry.data[CONF_HOST],
-                exc_info=True,
-            )
-
-    @callback
-    def _push_event_callback(self, event_data: Any) -> None:
-        """Handle a push event from Baichuan."""
-        self.async_set_updated_data(self._parse_states())
-
     async def async_teardown(self) -> None:
-        """Tear down the coordinator: unsubscribe and logout."""
-        if self._push_enabled:
-            try:
-                self.host.baichuan.unregister_callback("reolink_nvr_events")
-            except Exception:
-                _LOGGER.debug("Error unregistering Baichuan callback", exc_info=True)
-
+        """Tear down the coordinator: logout."""
         try:
-            await self.host.logout()
+            await self.api.logout()
         except Exception:
             _LOGGER.debug("Error logging out from NVR", exc_info=True)
 
     async def _async_update_data(self) -> dict[int, dict[str, Any]]:
         """Fetch data from the NVR."""
         try:
-            await self.host.get_states()
-        except CredentialsInvalidError as err:
+            states = await self.api.get_states()
+        except ReolinkAuthError as err:
             raise ConfigEntryAuthFailed(
                 f"Invalid credentials for {self.config_entry.data[CONF_HOST]}"
             ) from err
-        except LoginError as err:
-            raise ConfigEntryAuthFailed(str(err)) from err
-        except (ReolinkConnectionError, ReolinkError) as err:
+        except (ReolinkConnectionError, ReolinkNvrApiError) as err:
             raise UpdateFailed(
                 f"Error fetching data from {self.config_entry.data[CONF_HOST]}: {err}"
             ) from err
 
-        states = self._parse_states()
         self._fire_events(states)
         return states
-
-    def _parse_states(self) -> dict[int, dict[str, Any]]:
-        """Parse channel states from the host."""
-        result: dict[int, dict[str, Any]] = {}
-
-        for channel in range(self.host.num_channel):
-            if not self.host.channel_online(channel):
-                continue
-
-            channel_state: dict[str, Any] = {
-                "online": True,
-                "name": self.host.camera_name(channel),
-                "model": self.host.camera_model(channel),
-                # Detection states
-                "motion": self.host.motion_detected(channel),
-                "person": self.host.ai_detected(channel, "people"),
-                "vehicle": self.host.ai_detected(channel, "vehicle"),
-                "pet": self.host.ai_detected(channel, "dog_cat"),
-                # Capabilities
-                "ptz_supported": self.host.ptz_supported(channel),
-                "has_speaker": self._has_speaker(channel),
-            }
-
-            # Doorbell detection if supported
-            try:
-                channel_state["doorbell"] = self.host.doorbell_pressed(channel)
-            except (AttributeError, TypeError):
-                channel_state["doorbell"] = False
-
-            result[channel] = channel_state
-
-        return result
-
-    def _has_speaker(self, channel: int) -> bool:
-        """Check if a channel's camera has speaker support."""
-        try:
-            return self.host.audio_support(channel)
-        except (AttributeError, TypeError):
-            return False
 
     def _fire_events(self, states: dict[int, dict[str, Any]]) -> None:
         """Fire HA events when detection states change to True."""

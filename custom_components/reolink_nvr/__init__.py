@@ -36,6 +36,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_setup()
     await coordinator.async_config_entry_first_refresh()
 
+    # Discover extra capabilities (audio, IR, PTZ) after initial entities are created
+    # This is done lazily to avoid overwhelming the NVR during setup
+    for channel in list(coordinator.api.channels):
+        ch_info = coordinator.api.channels[channel]
+        if ch_info.online:
+            try:
+                await coordinator.api.discover_channel_extras(channel)
+            except Exception:
+                _LOGGER.debug("Could not discover extras for ch %d", channel)
+
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

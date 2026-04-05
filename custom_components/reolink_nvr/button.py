@@ -122,7 +122,7 @@ class ReolinkPtzButton(ReolinkNvrEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Handle the button press — send PTZ command."""
         try:
-            await self.coordinator.host.set_ptz_command(
+            await self.coordinator.api.set_ptz_command(
                 self._channel, self.entity_description.ptz_command
             )
         except Exception:
