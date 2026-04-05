@@ -4,7 +4,7 @@
   "documentation": "https://github.com/dsorlov/reolinknvr",
   "issue_tracker": "https://github.com/dsorlov/reolinknvr/issues",
   "codeowners": ["@dsorlov"],
-  "version": "1.0.0",
+  "version": "1.1.0",
   "config_flow": true,
   "integration_type": "hub",
   "iot_class": "local_polling",
