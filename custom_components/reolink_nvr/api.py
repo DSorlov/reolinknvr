@@ -74,7 +74,9 @@ class ReolinkNvrApi:
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp session with SSL disabled for self-signed certs."""
         if self._session is None or self._session.closed:
-            ssl_ctx = ssl.create_default_context()
+            # Use SSLContext directly to avoid blocking calls from
+            # ssl.create_default_context() (load_default_certs, set_default_verify_paths)
+            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ssl_ctx.check_hostname = False
             ssl_ctx.verify_mode = ssl.CERT_NONE
             connector = aiohttp.TCPConnector(ssl=ssl_ctx)

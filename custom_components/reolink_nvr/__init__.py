@@ -75,6 +75,8 @@ async def _async_update_listener(
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
     """Register custom frontend cards."""
+    from homeassistant.components.http import StaticPathConfig
+
     www_dir = os.path.join(os.path.dirname(__file__), "www")
     if not os.path.isdir(www_dir):
         return
@@ -85,16 +87,18 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
         "reolink-ptz-feature.js",
     ]
 
+    paths_to_register: list[StaticPathConfig] = []
     for card_file in card_files:
         card_path = os.path.join(www_dir, card_file)
         if os.path.isfile(card_path):
             url_path = f"/hacsfiles/reolink_nvr/{card_file}"
-            hass.http.register_static_path(
-                url_path,
-                card_path,
-                cache_headers=True,
+            paths_to_register.append(
+                StaticPathConfig(url_path, card_path, cache_headers=True)
             )
             _LOGGER.debug("Registered frontend card: %s", url_path)
+
+    if paths_to_register:
+        await hass.http.async_register_static_paths(paths_to_register)
 
     # Register cards as Lovelace resources
     hass.data.setdefault("lovelace_resources", set())
