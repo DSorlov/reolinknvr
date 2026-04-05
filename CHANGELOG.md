@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.4] - 2026-04-06
 
+### Changed
+
+- Integration startup is now near-instant on subsequent loads. NVR and channel data is cached to disk via `homeassistant.helpers.storage.Store`. On restart, entities are created from cache immediately while a full NVR rediscovery runs in the background.
+
 ### Fixed
 
 - Custom cards now wait for `ha-panel-lovelace` to be defined before initializing. Scripts loaded via `add_extra_js_url` execute before the Lovelace panel exists, causing `customElements.get()` to return `undefined` and silently crashing all three card files.
+- PTZ detection now uses `GetAbility` per-channel abilities (single API call, read-only) instead of `GetPtzPreset` which returned 64 empty slots for all channels regardless of PTZ support.
 
 ## [1.1.3] - 2026-04-06
 
@@ -17,11 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Custom Lovelace cards now auto-register with the frontend using `add_extra_js_url`. Previously, cards were served but never injected into the page.
 - Changed card URL prefix from `/hacsfiles/reolink_nvr/` to `/reolink_nvr/` (served directly by the integration).
-
-## [1.1.2] - 2026-04-06
-
-### Fixed
-
 - PTZ detection no longer physically moves cameras during setup. Replaced `PtzCheck` (sends motor command) with read-only `GetPtzPreset` check — cameras with enabled presets are detected as PTZ-capable.
 
 ## [1.1.1] - 2026-04-06
@@ -77,10 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reolink RLN8 (expected)
 - Any Reolink NVR with HTTP JSON API support
 
-[1.1.3]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.3
 [1.1.4]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.4
 [1.1.3]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.3
-[1.1.2]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.2
 [1.1.1]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.1
 [1.1.0]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.0
 [1.0.0]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.0.0

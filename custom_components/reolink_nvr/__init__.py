@@ -34,17 +34,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = ReolinkNvrCoordinator(hass, entry)
 
     await coordinator.async_setup()
-    await coordinator.async_config_entry_first_refresh()
 
-    # Discover extra capabilities (audio, IR, PTZ) after initial entities are created
-    # This is done lazily to avoid overwhelming the NVR during setup
-    for channel in list(coordinator.api.channels):
-        ch_info = coordinator.api.channels[channel]
-        if ch_info.online:
-            try:
-                await coordinator.api.discover_channel_extras(channel)
-            except Exception:
-                _LOGGER.debug("Could not discover extras for ch %d", channel)
+    if coordinator._loaded_from_cache:
+        # Cache hit — login for polling, then schedule full refresh in background
+        try:
+            await coordinator.api.login()
+        except Exception:
+            _LOGGER.warning("Login failed after cache load, will retry on next poll")
+
+        await coordinator.async_config_entry_first_refresh()
+
+        # Full NVR discovery runs in background so entities appear instantly
+        entry.async_create_background_task(
+            hass,
+            coordinator.async_full_refresh(),
+            f"{DOMAIN}_bg_refresh_{entry.entry_id}",
+        )
+    else:
+        # No cache — first time setup, do everything synchronously
+        await coordinator.async_config_entry_first_refresh()
+
+        for channel in list(coordinator.api.channels):
+            ch_info = coordinator.api.channels[channel]
+            if ch_info.online:
+                try:
+                    await coordinator.api.discover_channel_extras(channel)
+                except Exception:
+                    _LOGGER.debug("Could not discover extras for ch %d", channel)
+
+        await coordinator.async_save_cache()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 

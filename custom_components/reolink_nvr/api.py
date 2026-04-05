@@ -66,6 +66,38 @@ class ReolinkNvrApi:
         # Network info
         self.rtsp_port: int = 554
 
+    def to_cache_dict(self) -> dict[str, Any]:
+        """Serialize NVR + channel data for persistent cache."""
+        return {
+            "nvr_name": self.nvr_name,
+            "model": self.model,
+            "serial": self.serial,
+            "mac_address": self.mac_address,
+            "sw_version": self.sw_version,
+            "hardware_version": self.hardware_version,
+            "num_channels": self.num_channels,
+            "rtsp_port": self.rtsp_port,
+            "channels": {
+                str(ch): info.to_dict()
+                for ch, info in self.channels.items()
+            },
+        }
+
+    def load_from_cache(self, data: dict[str, Any]) -> None:
+        """Populate NVR + channel data from a cached dict."""
+        self.nvr_name = data.get("nvr_name", "")
+        self.model = data.get("model", "")
+        self.serial = data.get("serial", "")
+        self.mac_address = data.get("mac_address", "")
+        self.sw_version = data.get("sw_version", "")
+        self.hardware_version = data.get("hardware_version", "")
+        self.num_channels = data.get("num_channels", 0)
+        self.rtsp_port = data.get("rtsp_port", 554)
+        self.channels = {
+            int(ch): ChannelInfo.from_dict(ch_data)
+            for ch, ch_data in data.get("channels", {}).items()
+        }
+
     @property
     def _base_url(self) -> str:
         scheme = "https" if self._use_https else "http"
@@ -190,10 +222,33 @@ class ReolinkNvrApi:
                 self.channels[ch].name = name
                 self.channels[ch].online = online
 
+        # Fetch per-channel abilities in one call (PTZ detection, etc.)
+        await self._fetch_channel_abilities()
+
         # Discover capabilities for online channels (essential data only)
         online_channels = [ch for ch, info in self.channels.items() if info.online]
         for ch in online_channels:
             await self._discover_channel_essentials(ch)
+
+    async def _fetch_channel_abilities(self) -> None:
+        """Fetch GetAbility once to detect per-channel PTZ support."""
+        try:
+            result = await self._api_call(
+                "GetAbility", {"User": {"userName": self._username}}
+            )
+            ability = result[0].get("value", {}).get("Ability", {})
+            chn_list = ability.get("abilityChn", [])
+            for idx, ch_ab in enumerate(chn_list):
+                if idx not in self.channels:
+                    continue
+                ptz_type = ch_ab.get("ptzType", {})
+                if ptz_type.get("ver", 0) > 0:
+                    self.channels[idx].ptz_supported = True
+                else:
+                    self.channels[idx].ptz_supported = False
+                    self.channels[idx].ptz_presets = {}
+        except Exception:
+            _LOGGER.debug("Could not fetch channel abilities", exc_info=True)
 
     async def _discover_channel_essentials(self, channel: int) -> None:
         """Discover essential capabilities: AI detection + RTSP URLs.
@@ -249,21 +304,18 @@ class ReolinkNvrApi:
         except Exception:
             _LOGGER.debug("Could not get IR state for ch %d", channel)
 
-        # PTZ — detect by checking presets (read-only, doesn't move the camera)
-        # PtzCheck physically moves the motor so we must NOT use it.
-        try:
-            result = await self._api_call("GetPtzPreset", {"channel": channel})
-            presets = result[0].get("value", {}).get("PtzPreset", [])
-            enabled = {
-                p["id"]: p["name"]
-                for p in presets
-                if p.get("enable", 0) == 1 and p.get("name")
-            }
-            if enabled:
-                ch_info.ptz_supported = True
-                ch_info.ptz_presets = enabled
-        except Exception:
-            _LOGGER.debug("Could not check PTZ presets for ch %d", channel)
+        # PTZ presets — only load for channels already detected as PTZ by GetAbility
+        if ch_info.ptz_supported:
+            try:
+                result = await self._api_call("GetPtzPreset", {"channel": channel})
+                presets = result[0].get("value", {}).get("PtzPreset", [])
+                ch_info.ptz_presets = {
+                    p["id"]: p["name"]
+                    for p in presets
+                    if p.get("enable", 0) == 1 and p.get("name")
+                }
+            except Exception:
+                _LOGGER.debug("Could not load PTZ presets for ch %d", channel)
 
         ch_info._extras_discovered = True
 
@@ -405,3 +457,45 @@ class ChannelInfo:
 
         # Whether extras (audio, IR, PTZ) have been discovered
         self._extras_discovered: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a dict for cache storage."""
+        return {
+            "channel": self.channel,
+            "name": self.name,
+            "online": self.online,
+            "rtsp_main": self.rtsp_main,
+            "rtsp_sub": self.rtsp_sub,
+            "ai_people": self.ai_people,
+            "ai_vehicle": self.ai_vehicle,
+            "ai_pet": self.ai_pet,
+            "has_speaker": self.has_speaker,
+            "volume": self.volume,
+            "ptz_supported": self.ptz_supported,
+            "ptz_presets": {str(k): v for k, v in self.ptz_presets.items()},
+            "has_ir": self.has_ir,
+            "ir_state": self.ir_state,
+            "extras_discovered": self._extras_discovered,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ChannelInfo:
+        """Deserialize from a cached dict."""
+        info = cls(
+            channel=data["channel"],
+            name=data.get("name", f"Channel {data['channel']}"),
+            online=data.get("online", False),
+        )
+        info.rtsp_main = data.get("rtsp_main", "")
+        info.rtsp_sub = data.get("rtsp_sub", "")
+        info.ai_people = data.get("ai_people", False)
+        info.ai_vehicle = data.get("ai_vehicle", False)
+        info.ai_pet = data.get("ai_pet", False)
+        info.has_speaker = data.get("has_speaker", False)
+        info.volume = data.get("volume", 100)
+        info.ptz_supported = data.get("ptz_supported", False)
+        info.ptz_presets = {int(k): v for k, v in data.get("ptz_presets", {}).items()}
+        info.has_ir = data.get("has_ir", False)
+        info.ir_state = data.get("ir_state", "Auto")
+        info._extras_discovered = data.get("extras_discovered", False)
+        return info
