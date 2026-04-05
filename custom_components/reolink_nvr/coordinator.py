@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import ReolinkAuthError, ReolinkConnectionError, ReolinkNvrApi, ReolinkNvrApiError
@@ -28,6 +29,8 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+STORE_VERSION = 1
 
 
 class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
@@ -59,6 +62,10 @@ class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
         )
 
         self._previous_states: dict[int, dict[str, bool]] = {}
+        self._store = Store[dict[str, Any]](
+            hass, STORE_VERSION, f"{DOMAIN}.{entry.entry_id}"
+        )
+        self._loaded_from_cache: bool = False
 
     @property
     def nvr_name(self) -> str:
@@ -81,7 +88,15 @@ class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
         return self.api.sw_version
 
     async def async_setup(self) -> None:
-        """Set up the coordinator: login and fetch NVR data."""
+        """Set up the coordinator: try cache first, then login and fetch NVR data."""
+        cached = await self._store.async_load()
+        if cached:
+            _LOGGER.debug("Loading NVR data from cache for %s", self.config_entry.data[CONF_HOST])
+            self.api.load_from_cache(cached)
+            self._loaded_from_cache = True
+            return
+
+        # No cache — do the full slow discovery
         try:
             await self.api.get_host_data()
         except ReolinkAuthError as err:
@@ -92,6 +107,31 @@ class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
             raise UpdateFailed(
                 f"Error connecting to {self.config_entry.data[CONF_HOST]}: {err}"
             ) from err
+
+    async def async_save_cache(self) -> None:
+        """Persist the current NVR + channel data to disk."""
+        await self._store.async_save(self.api.to_cache_dict())
+
+    async def async_full_refresh(self) -> None:
+        """Do a full NVR login + discovery + extras and save cache.
+
+        Called in background after a cache-based startup, or when
+        the user triggers a manual refresh.
+        """
+        try:
+            await self.api.get_host_data()
+            for ch, ch_info in list(self.api.channels.items()):
+                if ch_info.online:
+                    try:
+                        await self.api.discover_channel_extras(ch)
+                    except Exception:
+                        _LOGGER.debug("Could not discover extras for ch %d", ch)
+            await self.async_save_cache()
+            _LOGGER.debug("Background NVR refresh complete, cache saved")
+        except ReolinkAuthError:
+            _LOGGER.warning("Auth failed during background refresh")
+        except Exception:
+            _LOGGER.warning("Background NVR refresh failed", exc_info=True)
 
     async def async_teardown(self) -> None:
         """Tear down the coordinator: logout."""
