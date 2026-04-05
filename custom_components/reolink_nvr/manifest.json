@@ -1,0 +1,12 @@
+{
+  "domain": "reolink_nvr",
+  "name": "Reolink NVR",
+  "documentation": "https://github.com/dsorlov/reolinknvr",
+  "issue_tracker": "https://github.com/dsorlov/reolinknvr/issues",
+  "codeowners": ["@dsorlov"],
+  "version": "1.0.0",
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "requirements": ["reolink-aio>=0.11.0"]
+}

@@ -1,0 +1,38 @@
+ptz_control:
+  name: PTZ Control
+  description: Send a PTZ command to a Reolink camera channel.
+  fields:
+    entity_id:
+      name: Camera
+      description: The camera entity to control.
+      required: true
+      selector:
+        entity:
+          domain: camera
+          integration: reolink_nvr
+    command:
+      name: Command
+      description: The PTZ command to send.
+      required: true
+      selector:
+        select:
+          options:
+            - "left"
+            - "right"
+            - "up"
+            - "down"
+            - "zoom_in"
+            - "zoom_out"
+            - "focus_near"
+            - "focus_far"
+            - "stop"
+    speed:
+      name: Speed
+      description: PTZ movement speed (1-64).
+      required: false
+      default: 25
+      selector:
+        number:
+          min: 1
+          max: 64
+          step: 1

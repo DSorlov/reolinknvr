@@ -1,0 +1,86 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Reolink NVR Connection",
+        "description": "Enter the connection details for your Reolink NVR.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "use_https": "Use HTTPS"
+        },
+        "data_description": {
+          "host": "IP address or hostname of your Reolink NVR",
+          "port": "HTTP port (default: 80)",
+          "username": "Admin username for the NVR",
+          "password": "Password (max 31 characters)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "The credentials for {host} are no longer valid. Please enter updated credentials.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the NVR. Check the IP address and port.",
+      "invalid_auth": "Invalid username or password.",
+      "password_too_long": "Password exceeds 31 characters. Reolink NVRs require passwords of 31 characters or fewer.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This NVR is already configured.",
+      "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Reolink NVR Options",
+        "data": {
+          "stream_default": "Default stream quality",
+          "poll_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "stream_default": "Sub stream uses less bandwidth; Main stream is higher quality",
+          "poll_interval": "How often to poll the NVR for state updates (in addition to push events)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "motion": { "name": "Motion" },
+      "person": { "name": "Person" },
+      "vehicle": { "name": "Vehicle" },
+      "pet": { "name": "Pet" },
+      "doorbell": { "name": "Doorbell" }
+    },
+    "button": {
+      "ptz_left": { "name": "PTZ Left" },
+      "ptz_right": { "name": "PTZ Right" },
+      "ptz_up": { "name": "PTZ Up" },
+      "ptz_down": { "name": "PTZ Down" },
+      "ptz_zoom_in": { "name": "Zoom In" },
+      "ptz_zoom_out": { "name": "Zoom Out" },
+      "ptz_stop": { "name": "PTZ Stop" }
+    },
+    "number": {
+      "ptz_speed": { "name": "PTZ Speed" },
+      "volume": { "name": "Speaker Volume" }
+    },
+    "select": {
+      "stream_quality": { "name": "Stream Quality" },
+      "ptz_preset": { "name": "PTZ Preset" }
+    },
+    "switch": {
+      "ptz_patrol": { "name": "PTZ Patrol" },
+      "ir_lights": { "name": "IR Lights" }
+    }
+  }
+}
