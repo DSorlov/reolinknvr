@@ -8,6 +8,10 @@
  * - Responsive columns (auto or configurable)
  */
 
+(async () => {
+
+await customElements.whenDefined("ha-panel-lovelace");
+
 const LitElement = Object.getPrototypeOf(
   customElements.get("ha-panel-lovelace")
 );
@@ -324,3 +328,5 @@ window.customCards.push({
   description:
     "Multi-camera grid overview for Reolink NVR. Tap a camera to expand with full PTZ and audio controls.",
 });
+
+})();

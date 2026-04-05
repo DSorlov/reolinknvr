@@ -11,6 +11,10 @@
  * - Stream quality toggle (sub/main)
  */
 
+(async () => {
+
+await customElements.whenDefined("ha-panel-lovelace");
+
 const LitElement = Object.getPrototypeOf(
   customElements.get("ha-panel-lovelace")
 );
@@ -711,3 +715,5 @@ window.customCards.push({
   description:
     "Touch-friendly camera card with WebRTC, PTZ controls, and two-way audio for Reolink NVR cameras.",
 });
+
+})();

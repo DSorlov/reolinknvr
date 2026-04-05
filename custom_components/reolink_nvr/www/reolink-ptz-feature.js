@@ -13,6 +13,10 @@
  *       show_presets: true
  */
 
+(async () => {
+
+await customElements.whenDefined("ha-panel-lovelace");
+
 const LitElement = Object.getPrototypeOf(
   customElements.get("ha-panel-lovelace")
 );
@@ -317,3 +321,5 @@ window.customCardFeatures.push({
   supported: supportsPtzFeature,
   configurable: true,
 });
+
+})();
