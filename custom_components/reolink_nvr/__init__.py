@@ -75,6 +75,7 @@ async def _async_update_listener(
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
     """Register custom frontend cards."""
+    from homeassistant.components.frontend import add_extra_js_url
     from homeassistant.components.http import StaticPathConfig
 
     www_dir = os.path.join(os.path.dirname(__file__), "www")
@@ -91,18 +92,16 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     for card_file in card_files:
         card_path = os.path.join(www_dir, card_file)
         if os.path.isfile(card_path):
-            url_path = f"/hacsfiles/reolink_nvr/{card_file}"
+            url_path = f"/reolink_nvr/{card_file}"
             paths_to_register.append(
                 StaticPathConfig(url_path, card_path, cache_headers=True)
             )
-            _LOGGER.debug("Registered frontend card: %s", url_path)
 
     if paths_to_register:
         await hass.http.async_register_static_paths(paths_to_register)
 
-    # Register cards as Lovelace resources
-    hass.data.setdefault("lovelace_resources", set())
+    # Inject cards into the frontend so they load on every page
     for card_file in card_files:
-        resource_url = f"/hacsfiles/reolink_nvr/{card_file}"
-        if resource_url not in hass.data["lovelace_resources"]:
-            hass.data["lovelace_resources"].add(resource_url)
+        url_path = f"/reolink_nvr/{card_file}"
+        add_extra_js_url(hass, url_path)
+        _LOGGER.debug("Registered frontend card: %s", url_path)
