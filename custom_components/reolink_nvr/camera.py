@@ -37,9 +37,7 @@ async def async_setup_entry(
 class ReolinkNvrCamera(ReolinkNvrEntity, Camera):
     """Representation of a Reolink NVR camera channel."""
 
-    _attr_supported_features = (
-        CameraEntityFeature.STREAM | CameraEntityFeature.ON_OFF
-    )
+    _attr_supported_features = CameraEntityFeature.STREAM | CameraEntityFeature.ON_OFF
     _attr_brand = "Reolink"
 
     def __init__(
@@ -99,7 +97,11 @@ class ReolinkNvrCamera(ReolinkNvrEntity, Camera):
         ch_info = self.coordinator.api.channels.get(self._channel)
         if ch_info:
             # Use the RTSP URL from the NVR, injecting credentials
-            rtsp_url = ch_info.rtsp_sub if self._stream_quality == STREAM_SUB else ch_info.rtsp_main
+            rtsp_url = (
+                ch_info.rtsp_sub
+                if self._stream_quality == STREAM_SUB
+                else ch_info.rtsp_main
+            )
             if rtsp_url:
                 # Insert credentials: rtsp://host:port/path → rtsp://user:pass@host:port/path
                 return rtsp_url.replace("rtsp://", f"rtsp://{username}:{password}@", 1)

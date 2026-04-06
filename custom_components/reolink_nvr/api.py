@@ -77,10 +77,7 @@ class ReolinkNvrApi:
             "hardware_version": self.hardware_version,
             "num_channels": self.num_channels,
             "rtsp_port": self.rtsp_port,
-            "channels": {
-                str(ch): info.to_dict()
-                for ch, info in self.channels.items()
-            },
+            "channels": {str(ch): info.to_dict() for ch, info in self.channels.items()},
         }
 
     def load_from_cache(self, data: dict[str, Any]) -> None:
@@ -113,9 +110,7 @@ class ReolinkNvrApi:
             ssl_ctx.verify_mode = ssl.CERT_NONE
             connector = aiohttp.TCPConnector(ssl=ssl_ctx)
             timeout = aiohttp.ClientTimeout(total=API_TIMEOUT)
-            self._session = aiohttp.ClientSession(
-                connector=connector, timeout=timeout
-            )
+            self._session = aiohttp.ClientSession(connector=connector, timeout=timeout)
         return self._session
 
     async def _api_call(
@@ -155,9 +150,7 @@ class ReolinkNvrApi:
         if resp.get("code") != 0:
             error = resp.get("error", {})
             detail = error.get("detail", "unknown")
-            raise ReolinkAuthError(
-                f"Login failed for {self._host}: {detail}"
-            )
+            raise ReolinkAuthError(f"Login failed for {self._host}: {detail}")
 
         self._token = resp["value"]["Token"]["name"]
 
@@ -265,9 +258,18 @@ class ReolinkNvrApi:
         try:
             result = await self._api_call("GetAiState", {"channel": channel})
             ai_val = result[0].get("value", {})
-            ch_info.ai_people = isinstance(ai_val.get("people"), dict) and ai_val["people"].get("support", 0) == 1
-            ch_info.ai_vehicle = isinstance(ai_val.get("vehicle"), dict) and ai_val["vehicle"].get("support", 0) == 1
-            ch_info.ai_pet = isinstance(ai_val.get("dog_cat"), dict) and ai_val["dog_cat"].get("support", 0) == 1
+            ch_info.ai_people = (
+                isinstance(ai_val.get("people"), dict)
+                and ai_val["people"].get("support", 0) == 1
+            )
+            ch_info.ai_vehicle = (
+                isinstance(ai_val.get("vehicle"), dict)
+                and ai_val["vehicle"].get("support", 0) == 1
+            )
+            ch_info.ai_pet = (
+                isinstance(ai_val.get("dog_cat"), dict)
+                and ai_val["dog_cat"].get("support", 0) == 1
+            )
         except Exception:
             _LOGGER.debug("Could not get AI state for ch %d", channel)
 
@@ -335,7 +337,9 @@ class ReolinkNvrApi:
                 ch = ch_status["channel"]
                 if ch in self.channels:
                     self.channels[ch].online = ch_status.get("online", 0) == 1
-                    self.channels[ch].name = ch_status.get("name", self.channels[ch].name)
+                    self.channels[ch].name = ch_status.get(
+                        "name", self.channels[ch].name
+                    )
         except Exception:
             _LOGGER.debug("Error refreshing channel status", exc_info=True)
 
@@ -415,10 +419,7 @@ class ReolinkNvrApi:
     async def get_snapshot(self, channel: int) -> bytes | None:
         """Get a JPEG snapshot from a channel."""
         session = await self._ensure_session()
-        url = (
-            f"{self._base_url}/cgi-bin/api.cgi"
-            f"?cmd=Snap&channel={channel}&rs=flushbuf"
-        )
+        url = f"{self._base_url}/cgi-bin/api.cgi?cmd=Snap&channel={channel}&rs=flushbuf"
         if self._token:
             url += f"&token={self._token}"
 

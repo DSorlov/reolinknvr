@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -100,9 +99,7 @@ class ReolinkNvrBinarySensor(ReolinkNvrEntity, BinarySensorEntity):
         """Initialize the binary sensor."""
         super().__init__(coordinator, channel)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.nvr_serial}_{channel}_{description.key}"
-        )
+        self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_{description.key}"
 
     @property
     def is_on(self) -> bool | None:

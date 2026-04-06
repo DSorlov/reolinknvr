@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any
 
 from homeassistant.components.number import (
     NumberEntity,
@@ -89,12 +88,8 @@ class ReolinkNumber(ReolinkNvrEntity, NumberEntity):
         """Initialize the number entity."""
         super().__init__(coordinator, channel)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.nvr_serial}_{channel}_{description.key}"
-        )
-        self._value: float = (
-            DEFAULT_PTZ_SPEED if description.key == "ptz_speed" else 50
-        )
+        self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_{description.key}"
+        self._value: float = DEFAULT_PTZ_SPEED if description.key == "ptz_speed" else 50
 
     @property
     def native_value(self) -> float:
@@ -107,9 +102,7 @@ class ReolinkNumber(ReolinkNvrEntity, NumberEntity):
 
         if self.entity_description.key == "volume":
             try:
-                await self.coordinator.api.set_volume(
-                    self._channel, volume=int(value)
-                )
+                await self.coordinator.api.set_volume(self._channel, volume=int(value))
             except Exception:
                 _LOGGER.error(
                     "Error setting volume for channel %d",

@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DEFAULT_STREAM, DOMAIN, STREAM_MAIN, STREAM_OPTIONS, STREAM_SUB
+from .const import DEFAULT_STREAM, DOMAIN, STREAM_OPTIONS
 from .coordinator import ReolinkNvrCoordinator
 from .entity import ReolinkNvrEntity
 
@@ -51,9 +51,7 @@ class ReolinkStreamQualitySelect(ReolinkNvrEntity, SelectEntity):
     ) -> None:
         """Initialize the stream quality select."""
         super().__init__(coordinator, channel)
-        self._attr_unique_id = (
-            f"{coordinator.nvr_serial}_{channel}_stream_quality"
-        )
+        self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_stream_quality"
         self._current_option = coordinator.config_entry.options.get(
             "stream_default", DEFAULT_STREAM
         )
@@ -102,9 +100,7 @@ class ReolinkPtzPresetSelect(ReolinkNvrEntity, SelectEntity):
     ) -> None:
         """Initialize the PTZ preset select."""
         super().__init__(coordinator, channel)
-        self._attr_unique_id = (
-            f"{coordinator.nvr_serial}_{channel}_ptz_preset"
-        )
+        self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_ptz_preset"
         self._presets: dict[str, int] = {}
         self._current_option: str | None = None
         self._load_presets()
@@ -114,7 +110,8 @@ class ReolinkPtzPresetSelect(ReolinkNvrEntity, SelectEntity):
         ch_info = self.coordinator.api.channels.get(self._channel)
         if ch_info and ch_info.ptz_presets:
             self._presets = {
-                name: idx for idx, name in ch_info.ptz_presets.items()
+                name: idx
+                for idx, name in ch_info.ptz_presets.items()
                 if name  # skip empty names
             }
         if not self._presets:

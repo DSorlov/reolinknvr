@@ -13,14 +13,18 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import ReolinkAuthError, ReolinkConnectionError, ReolinkNvrApi, ReolinkNvrApiError
+from .api import (
+    ReolinkAuthError,
+    ReolinkConnectionError,
+    ReolinkNvrApi,
+    ReolinkNvrApiError,
+)
 from .const import (
     CONF_USE_HTTPS,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_PORT,
     DOMAIN,
     EVENT_DOORBELL,
-    EVENT_HDD_ERROR,
     EVENT_MOTION,
     EVENT_PERSON,
     EVENT_PET,
@@ -91,7 +95,9 @@ class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
         """Set up the coordinator: try cache first, then login and fetch NVR data."""
         cached = await self._store.async_load()
         if cached:
-            _LOGGER.debug("Loading NVR data from cache for %s", self.config_entry.data[CONF_HOST])
+            _LOGGER.debug(
+                "Loading NVR data from cache for %s", self.config_entry.data[CONF_HOST]
+            )
             self.api.load_from_cache(cached)
             self._loaded_from_cache = True
             return
@@ -180,7 +186,9 @@ class ReolinkNvrCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
                         {
                             "type": event_type,
                             "channel": channel,
-                            "channel_name": channel_state.get("name", f"Channel {channel}"),
+                            "channel_name": channel_state.get(
+                                "name", f"Channel {channel}"
+                            ),
                             "nvr_name": self.nvr_name,
                             "nvr_serial": self.nvr_serial,
                             "timestamp": datetime.now(timezone.utc).isoformat(),

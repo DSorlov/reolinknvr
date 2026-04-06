@@ -68,9 +68,7 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
         """Initialize the switch."""
         super().__init__(coordinator, channel)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.nvr_serial}_{channel}_{description.key}"
-        )
+        self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_{description.key}"
         self._is_on = False
 
     @property
@@ -82,9 +80,7 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
         """Turn on the switch."""
         try:
             if self.entity_description.key == "ptz_patrol":
-                await self.coordinator.api.set_ptz_command(
-                    self._channel, "StartPatrol"
-                )
+                await self.coordinator.api.set_ptz_command(self._channel, "StartPatrol")
         except Exception:
             _LOGGER.error(
                 "Error turning on %s for channel %d",
@@ -101,9 +97,7 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
         """Turn off the switch."""
         try:
             if self.entity_description.key == "ptz_patrol":
-                await self.coordinator.api.set_ptz_command(
-                    self._channel, "StopPatrol"
-                )
+                await self.coordinator.api.set_ptz_command(self._channel, "StopPatrol")
         except Exception:
             _LOGGER.error(
                 "Error turning off %s for channel %d",

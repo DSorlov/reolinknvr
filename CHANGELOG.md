@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2026-04-06
+
+### Fixed
+
+- Removed 8 unused imports flagged by Ruff (`typing.Any`, `PTZ_FOCUS_FAR`, `PTZ_FOCUS_NEAR`, `DEFAULT_PORT`, `EVENT_HDD_ERROR`, `STREAM_MAIN`, `STREAM_SUB`).
+- Applied Ruff auto-formatting to all Python files.
+- Declared `http` and `frontend` in `manifest.json` dependencies (hassfest validation failure).
+- Added GitHub repository topics required by HACS validation (`hacs`, `home-assistant`, etc.).
+- Added Reolink brand icon and logo to `brand/` directory for HACS.
+
+## [1.1.7] - 2026-04-06
+
+### Fixed
+
+- Custom cards (Reolink Camera, Camera Grid, PTZ feature) were not visible in the HA card picker. `window.customCards.push()` was inside the async IIFE that waits for `ha-panel-lovelace` — moved card registrations to synchronous top-level scope.
+
 ## [1.1.6] - 2026-04-06
 
 ### Fixed

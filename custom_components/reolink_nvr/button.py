@@ -13,8 +13,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     DOMAIN,
     PTZ_DOWN,
-    PTZ_FOCUS_FAR,
-    PTZ_FOCUS_NEAR,
     PTZ_LEFT,
     PTZ_RIGHT,
     PTZ_STOP,
@@ -94,9 +92,7 @@ async def async_setup_entry(
         for channel, channel_data in coordinator.data.items():
             if channel_data.get("ptz_supported"):
                 for description in PTZ_BUTTON_TYPES:
-                    entities.append(
-                        ReolinkPtzButton(coordinator, channel, description)
-                    )
+                    entities.append(ReolinkPtzButton(coordinator, channel, description))
 
     async_add_entities(entities)
 
@@ -115,9 +111,7 @@ class ReolinkPtzButton(ReolinkNvrEntity, ButtonEntity):
         """Initialize the PTZ button."""
         super().__init__(coordinator, channel)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.nvr_serial}_{channel}_{description.key}"
-        )
+        self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_{description.key}"
 
     async def async_press(self) -> None:
         """Handle the button press — send PTZ command."""
