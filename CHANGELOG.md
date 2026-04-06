@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-04-06
+
+### Fixed
+
+- Custom cards not loading after update ("Custom element doesn't exist"). Disabled aggressive cache headers on static JS files and added version-based cache-busting query parameter to card URLs.
+
 ## [1.2.0] - 2026-04-06
 
 ### Fixed

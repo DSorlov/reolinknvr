@@ -167,6 +167,19 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     if not os.path.isdir(www_dir):
         return
 
+    # Read version for cache-busting query parameter
+    from .const import DOMAIN  # noqa: F811
+
+    manifest_path = os.path.join(os.path.dirname(__file__), "manifest.json")
+    version = ""
+    try:
+        import json
+
+        with open(manifest_path) as f:
+            version = json.load(f).get("version", "")
+    except Exception:
+        pass
+
     card_files = [
         "reolink-camera-card.js",
         "reolink-camera-grid-card.js",
@@ -179,14 +192,16 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
         if os.path.isfile(card_path):
             url_path = f"/reolink_nvr/{card_file}"
             paths_to_register.append(
-                StaticPathConfig(url_path, card_path, cache_headers=True)
+                StaticPathConfig(url_path, card_path, cache_headers=False)
             )
 
     if paths_to_register:
         await hass.http.async_register_static_paths(paths_to_register)
 
-    # Inject cards into the frontend so they load on every page
+    # Inject cards into the frontend with cache-busting version param
     for card_file in card_files:
         url_path = f"/reolink_nvr/{card_file}"
+        if version:
+            url_path += f"?v={version}"
         add_extra_js_url(hass, url_path)
         _LOGGER.debug("Registered frontend card: %s", url_path)
