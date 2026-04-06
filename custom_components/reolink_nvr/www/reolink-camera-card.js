@@ -11,6 +11,16 @@
  * - Stream quality toggle (sub/main)
  */
 
+// Register card synchronously so the card picker sees it immediately
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "reolink-camera-card",
+  name: "Reolink Camera",
+  preview: false,
+  description:
+    "Touch-friendly camera card with WebRTC, PTZ controls, and two-way audio for Reolink NVR cameras.",
+});
+
 (async () => {
 
 await customElements.whenDefined("ha-panel-lovelace");
@@ -814,14 +824,5 @@ class ReolinkCameraCardEditor extends LitElement {
 }
 
 customElements.define("reolink-camera-card-editor", ReolinkCameraCardEditor);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "reolink-camera-card",
-  name: "Reolink Camera",
-  preview: false,
-  description:
-    "Touch-friendly camera card with WebRTC, PTZ controls, and two-way audio for Reolink NVR cameras.",
-});
 
 })();

@@ -8,6 +8,16 @@
  * - Responsive columns (auto or configurable)
  */
 
+// Register card synchronously so the card picker sees it immediately
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "reolink-camera-grid-card",
+  name: "Reolink Camera Grid",
+  preview: false,
+  description:
+    "Multi-camera grid overview for Reolink NVR. Tap a camera to expand with full PTZ and audio controls.",
+});
+
 (async () => {
 
 await customElements.whenDefined("ha-panel-lovelace");
@@ -393,14 +403,5 @@ class ReolinkCameraGridCardEditor extends LitElement {
 }
 
 customElements.define("reolink-camera-grid-card-editor", ReolinkCameraGridCardEditor);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "reolink-camera-grid-card",
-  name: "Reolink Camera Grid",
-  preview: false,
-  description:
-    "Multi-camera grid overview for Reolink NVR. Tap a camera to expand with full PTZ and audio controls.",
-});
 
 })();

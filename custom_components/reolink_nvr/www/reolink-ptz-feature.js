@@ -13,6 +13,22 @@
  *       show_presets: true
  */
 
+// Register feature synchronously so the card picker sees it immediately
+function supportsPtzFeature(stateObj) {
+  return (
+    stateObj.entity_id.startsWith("camera.") &&
+    stateObj.attributes &&
+    stateObj.attributes.ptz_supported === true
+  );
+}
+window.customCardFeatures = window.customCardFeatures || [];
+window.customCardFeatures.push({
+  type: "reolink-ptz-feature",
+  name: "Reolink PTZ Controls",
+  supported: supportsPtzFeature,
+  configurable: true,
+});
+
 (async () => {
 
 await customElements.whenDefined("ha-panel-lovelace");
@@ -22,15 +38,6 @@ const LitElement = Object.getPrototypeOf(
 );
 const html = LitElement.prototype.html;
 const css = LitElement.prototype.css;
-
-const supportsPtzFeature = (stateObj) => {
-  if (!stateObj || !stateObj.entity_id) return false;
-  return (
-    stateObj.entity_id.startsWith("camera.") &&
-    stateObj.attributes &&
-    stateObj.attributes.ptz_supported === true
-  );
-};
 
 class ReolinkPtzFeature extends LitElement {
   static get properties() {
@@ -381,13 +388,5 @@ class ReolinkPtzFeatureEditor extends LitElement {
 }
 
 customElements.define("reolink-ptz-feature-editor", ReolinkPtzFeatureEditor);
-
-window.customCardFeatures = window.customCardFeatures || [];
-window.customCardFeatures.push({
-  type: "reolink-ptz-feature",
-  name: "Reolink PTZ Controls",
-  supported: supportsPtzFeature,
-  configurable: true,
-});
 
 })();
