@@ -28,6 +28,7 @@ class ReolinkCameraCard extends LitElement {
       config: { type: Object },
       _fullscreen: { type: Boolean },
       _micActive: { type: Boolean },
+      _audioMuted: { type: Boolean },
       _showPtz: { type: Boolean },
       _scale: { type: Number },
       _translateX: { type: Number },
@@ -39,6 +40,7 @@ class ReolinkCameraCard extends LitElement {
     super();
     this._fullscreen = false;
     this._micActive = false;
+    this._audioMuted = true;
     this._showPtz = false;
     this._scale = 1;
     this._translateX = 0;
@@ -168,6 +170,12 @@ class ReolinkCameraCard extends LitElement {
       this._ptzInterval = null;
     }
     this._sendPtzCommand("stop");
+  }
+
+  // --- Audio ---
+
+  _toggleAudio() {
+    this._audioMuted = !this._audioMuted;
   }
 
   // --- Microphone ---
@@ -337,7 +345,7 @@ class ReolinkCameraCard extends LitElement {
             <ha-camera-stream
               .hass=${this.hass}
               .stateObj=${stateObj}
-              muted
+              .muted=${this._audioMuted}
             ></ha-camera-stream>
           </div>
 
@@ -345,6 +353,19 @@ class ReolinkCameraCard extends LitElement {
           <div class="controls-overlay">
             <!-- Left controls -->
             <div class="controls-left">
+              <button
+                class="control-btn speaker-btn ${this._audioMuted
+                  ? ""
+                  : "active"}"
+                @click=${this._toggleAudio}
+                title="Toggle audio"
+              >
+                <ha-icon
+                  icon=${this._audioMuted
+                    ? "mdi:volume-off"
+                    : "mdi:volume-high"}
+                ></ha-icon>
+              </button>
               ${showMic
                 ? html`
                     <button
@@ -613,6 +634,10 @@ class ReolinkCameraCard extends LitElement {
       .control-btn.mic-btn.active {
         background: rgba(76, 175, 80, 0.8);
         animation: micPulse 1.5s ease-in-out infinite;
+      }
+
+      .control-btn.speaker-btn.active {
+        background: rgba(33, 150, 243, 0.8);
       }
 
       @keyframes micPulse {

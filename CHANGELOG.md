@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-04-06
+
+### Fixed
+
+- PTZ controls now work — the `reolink_nvr.ptz_control` service was defined in `services.yaml` but never registered in Python. Added service handler in `async_setup` that resolves camera entity to NVR channel and sends the PTZ command.
+- Camera card stream audio was permanently muted due to a hardcoded `muted` attribute on `ha-camera-stream`.
+
+### Added
+
+- Speaker/audio toggle button on the camera card. Tap the speaker icon to unmute/mute stream audio. Starts muted (required for browser autoplay policy) with a blue highlight when active.
+
 ## [1.1.5] - 2026-04-06
 
 ### Fixed

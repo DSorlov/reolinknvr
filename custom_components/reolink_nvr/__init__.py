@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 import os
 
+import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import config_validation as cv, entity_registry as er
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import ReolinkNvrCoordinator
@@ -18,6 +20,20 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 type ReolinkNvrConfigEntry = ConfigEntry
 
+SERVICE_PTZ_CONTROL = "ptz_control"
+SERVICE_PTZ_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("command"): vol.In(
+            ["left", "right", "up", "down", "zoom_in", "zoom_out",
+             "focus_near", "focus_far", "stop"]
+        ),
+        vol.Optional("speed", default=25): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=64)
+        ),
+    }
+)
+
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Reolink NVR integration."""
@@ -25,6 +41,45 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     # Register frontend cards
     await _async_register_frontend(hass)
+
+    # Register PTZ service once (shared across all config entries)
+    if not hass.services.has_service(DOMAIN, SERVICE_PTZ_CONTROL):
+        async def _handle_ptz_control(call: ServiceCall) -> None:
+            """Handle ptz_control service call."""
+            entity_id: str = call.data["entity_id"]
+            command: str = call.data["command"]
+            speed: int = call.data.get("speed", 25)
+
+            # Find the coordinator + channel for this camera entity
+            entity_reg = er.async_get(hass)
+            entry = entity_reg.async_get(entity_id)
+            if entry is None or entry.platform != DOMAIN:
+                _LOGGER.error("Entity %s is not a %s camera", entity_id, DOMAIN)
+                return
+
+            # Extract channel from unique_id: {serial}_{channel}_camera
+            try:
+                channel = int(entry.unique_id.split("_")[-2])
+            except (ValueError, IndexError):
+                _LOGGER.error("Cannot parse channel from %s", entry.unique_id)
+                return
+
+            # Find the coordinator for this config entry
+            coordinator: ReolinkNvrCoordinator | None = hass.data.get(
+                DOMAIN, {}
+            ).get(entry.config_entry_id)
+            if coordinator is None:
+                _LOGGER.error("No coordinator for entry %s", entry.config_entry_id)
+                return
+
+            _LOGGER.debug(
+                "PTZ %s ch %d cmd=%s speed=%d", coordinator.nvr_serial, channel, command, speed
+            )
+            await coordinator.api.set_ptz_command(channel, command, speed)
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_PTZ_CONTROL, _handle_ptz_control, schema=SERVICE_PTZ_SCHEMA
+        )
 
     return True
 
