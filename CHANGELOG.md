@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-04-06
+
+### Fixed
+
+- PTZ detection now uses `GetAbility` per-channel abilities (single API call, read-only) instead of `GetPtzPreset` which returned 64 empty slots for all channels regardless of PTZ support.
+- Binary sensors no longer all show as "Beläggning" (Swedish for occupancy). Removed `BinarySensorDeviceClass.OCCUPANCY` so translation keys ("Person", "Vehicle", "Pet", "Doorbell") are used as entity names.
+- Person, vehicle, pet, and doorbell binary sensors are now only created for channels that support the respective detection type instead of being created for every channel.
+
+### Added
+
+- Doorbell camera detection via `GetAbility` (`supportDoorbellLight`). Doorbell channels get a dedicated ring binary sensor that checks the `visitor` alarm state in `GetAiState`.
+- Visual config editors for all three custom Lovelace cards (camera card, camera grid card, PTZ feature). Cards can now be fully configured from the HA graphical dashboard editor.
+
+### Removed
+
+- IR lights switch entity — the NVR manages night mode automatically and the switch did not reliably reflect or control the state.
+
 ## [1.1.4] - 2026-04-06
 
 ### Changed
@@ -14,7 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Custom cards now wait for `ha-panel-lovelace` to be defined before initializing. Scripts loaded via `add_extra_js_url` execute before the Lovelace panel exists, causing `customElements.get()` to return `undefined` and silently crashing all three card files.
-- PTZ detection now uses `GetAbility` per-channel abilities (single API call, read-only) instead of `GetPtzPreset` which returned 64 empty slots for all channels regardless of PTZ support.
 
 ## [1.1.3] - 2026-04-06
 
@@ -77,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reolink RLN8 (expected)
 - Any Reolink NVR with HTTP JSON API support
 
+[1.1.5]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.5
 [1.1.4]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.4
 [1.1.3]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.3
 [1.1.1]: https://github.com/dsorlov/reolinknvr/releases/tag/v1.1.1

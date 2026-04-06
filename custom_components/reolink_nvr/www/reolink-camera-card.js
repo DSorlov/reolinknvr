@@ -707,6 +707,89 @@ class ReolinkCameraCard extends LitElement {
 
 customElements.define("reolink-camera-card", ReolinkCameraCard);
 
+class ReolinkCameraCardEditor extends LitElement {
+  static get properties() {
+    return {
+      hass: { type: Object },
+      _config: { type: Object },
+    };
+  }
+
+  setConfig(config) {
+    this._config = config;
+  }
+
+  get _schema() {
+    const cameraEntities = this.hass
+      ? Object.keys(this.hass.states)
+          .filter((e) => e.startsWith("camera."))
+          .map((e) => ({ value: e, label: this.hass.states[e].attributes.friendly_name || e }))
+      : [];
+
+    return [
+      {
+        name: "entity",
+        required: true,
+        selector: { entity: { domain: "camera" } },
+      },
+      {
+        name: "ptz",
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_motion_indicator",
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_microphone",
+        selector: { boolean: {} },
+      },
+    ];
+  }
+
+  render() {
+    if (!this.hass || !this._config) return html``;
+
+    const data = {
+      entity: this._config.entity || "",
+      ptz: this._config.ptz !== false,
+      show_motion_indicator: this._config.show_motion_indicator !== false,
+      show_microphone: this._config.show_microphone !== false,
+    };
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${this._schema}
+        .computeLabel=${(s) => {
+          const labels = {
+            entity: "Camera Entity",
+            ptz: "Show PTZ Controls",
+            show_motion_indicator: "Show Motion Indicator",
+            show_microphone: "Show Microphone Button",
+          };
+          return labels[s.name] || s.name;
+        }}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+    `;
+  }
+
+  _valueChanged(ev) {
+    const config = { ...this._config, ...ev.detail.value };
+    this._config = config;
+    const event = new CustomEvent("config-changed", {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(event);
+  }
+}
+
+customElements.define("reolink-camera-card-editor", ReolinkCameraCardEditor);
+
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "reolink-camera-card",

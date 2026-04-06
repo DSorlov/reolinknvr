@@ -41,6 +41,10 @@ class ReolinkPtzFeature extends LitElement {
     };
   }
 
+  static getConfigElement() {
+    return document.createElement("reolink-ptz-feature-editor");
+  }
+
   static getStubConfig() {
     return {
       type: "custom:reolink-ptz-feature",
@@ -313,6 +317,70 @@ class ReolinkPtzFeature extends LitElement {
 }
 
 customElements.define("reolink-ptz-feature", ReolinkPtzFeature);
+
+class ReolinkPtzFeatureEditor extends LitElement {
+  static get properties() {
+    return {
+      hass: { type: Object },
+      _config: { type: Object },
+    };
+  }
+
+  setConfig(config) {
+    this._config = config;
+  }
+
+  get _schema() {
+    return [
+      {
+        name: "show_zoom",
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_presets",
+        selector: { boolean: {} },
+      },
+    ];
+  }
+
+  render() {
+    if (!this.hass || !this._config) return html``;
+
+    const data = {
+      show_zoom: this._config.show_zoom !== false,
+      show_presets: this._config.show_presets || false,
+    };
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${this._schema}
+        .computeLabel=${(s) => {
+          const labels = {
+            show_zoom: "Show Zoom Controls",
+            show_presets: "Show Preset Selector",
+          };
+          return labels[s.name] || s.name;
+        }}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+    `;
+  }
+
+  _valueChanged(ev) {
+    const config = { ...this._config, ...ev.detail.value };
+    this._config = config;
+    const event = new CustomEvent("config-changed", {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(event);
+  }
+}
+
+customElements.define("reolink-ptz-feature-editor", ReolinkPtzFeatureEditor);
 
 window.customCardFeatures = window.customCardFeatures || [];
 window.customCardFeatures.push({

@@ -79,8 +79,7 @@
       "ptz_preset": { "name": "PTZ Preset" }
     },
     "switch": {
-      "ptz_patrol": { "name": "PTZ Patrol" },
-      "ir_lights": { "name": "IR Lights" }
+      "ptz_patrol": { "name": "PTZ Patrol" }
     }
   }
 }

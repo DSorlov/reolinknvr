@@ -32,11 +32,6 @@ SWITCH_TYPES: tuple[ReolinkSwitchDescription, ...] = (
         icon="mdi:rotate-360",
         requires_ptz=True,
     ),
-    ReolinkSwitchDescription(
-        key="ir_lights",
-        translation_key="ir_lights",
-        icon="mdi:lightbulb-night",
-    ),
 )
 
 
@@ -90,8 +85,6 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
                 await self.coordinator.api.set_ptz_command(
                     self._channel, "StartPatrol"
                 )
-            elif self.entity_description.key == "ir_lights":
-                await self.coordinator.api.set_ir_lights(self._channel, state="Auto")
         except Exception:
             _LOGGER.error(
                 "Error turning on %s for channel %d",
@@ -111,8 +104,6 @@ class ReolinkSwitch(ReolinkNvrEntity, SwitchEntity):
                 await self.coordinator.api.set_ptz_command(
                     self._channel, "StopPatrol"
                 )
-            elif self.entity_description.key == "ir_lights":
-                await self.coordinator.api.set_ir_lights(self._channel, state="Off")
         except Exception:
             _LOGGER.error(
                 "Error turning off %s for channel %d",

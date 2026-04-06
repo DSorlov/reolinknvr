@@ -25,6 +25,7 @@ class ReolinkBinarySensorDescription(BinarySensorEntityDescription):
 
     state_key: str
     detection_type: str | None = None
+    capability_key: str | None = None
 
 
 BINARY_SENSOR_TYPES: tuple[ReolinkBinarySensorDescription, ...] = (
@@ -37,26 +38,26 @@ BINARY_SENSOR_TYPES: tuple[ReolinkBinarySensorDescription, ...] = (
     ReolinkBinarySensorDescription(
         key="person",
         translation_key="person",
-        device_class=BinarySensorDeviceClass.OCCUPANCY,
         state_key="person",
+        capability_key="ai_people",
     ),
     ReolinkBinarySensorDescription(
         key="vehicle",
         translation_key="vehicle",
-        device_class=BinarySensorDeviceClass.OCCUPANCY,
         state_key="vehicle",
+        capability_key="ai_vehicle",
     ),
     ReolinkBinarySensorDescription(
         key="pet",
         translation_key="pet",
-        device_class=BinarySensorDeviceClass.OCCUPANCY,
         state_key="pet",
+        capability_key="ai_pet",
     ),
     ReolinkBinarySensorDescription(
         key="doorbell",
         translation_key="doorbell",
-        device_class=BinarySensorDeviceClass.OCCUPANCY,
         state_key="doorbell",
+        capability_key="is_doorbell",
     ),
 )
 
@@ -72,7 +73,12 @@ async def async_setup_entry(
     entities: list[ReolinkNvrBinarySensor] = []
     if coordinator.data:
         for channel in coordinator.data:
+            ch_info = coordinator.api.channels.get(channel)
             for description in BINARY_SENSOR_TYPES:
+                # Only create sensor if camera supports this detection type
+                if description.capability_key and ch_info:
+                    if not getattr(ch_info, description.capability_key, False):
+                        continue
                 entities.append(
                     ReolinkNvrBinarySensor(coordinator, channel, description)
                 )

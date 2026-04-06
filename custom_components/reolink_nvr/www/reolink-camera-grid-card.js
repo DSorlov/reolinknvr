@@ -320,6 +320,80 @@ class ReolinkCameraGridCard extends LitElement {
 
 customElements.define("reolink-camera-grid-card", ReolinkCameraGridCard);
 
+class ReolinkCameraGridCardEditor extends LitElement {
+  static get properties() {
+    return {
+      hass: { type: Object },
+      _config: { type: Object },
+    };
+  }
+
+  setConfig(config) {
+    this._config = config;
+  }
+
+  get _schema() {
+    return [
+      {
+        name: "columns",
+        selector: {
+          number: { min: 0, max: 6, mode: "box" },
+        },
+      },
+      {
+        name: "show_motion_indicator",
+        selector: { boolean: {} },
+      },
+      {
+        name: "cameras",
+        selector: {
+          entity: { domain: "camera", multiple: true },
+        },
+      },
+    ];
+  }
+
+  render() {
+    if (!this.hass || !this._config) return html``;
+
+    const data = {
+      columns: this._config.columns || 0,
+      show_motion_indicator: this._config.show_motion_indicator !== false,
+      cameras: this._config.cameras || [],
+    };
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${this._schema}
+        .computeLabel=${(s) => {
+          const labels = {
+            columns: "Columns (0 = auto)",
+            show_motion_indicator: "Show Motion Indicator",
+            cameras: "Cameras (empty = auto-discover)",
+          };
+          return labels[s.name] || s.name;
+        }}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+    `;
+  }
+
+  _valueChanged(ev) {
+    const config = { ...this._config, ...ev.detail.value };
+    this._config = config;
+    const event = new CustomEvent("config-changed", {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(event);
+  }
+}
+
+customElements.define("reolink-camera-grid-card-editor", ReolinkCameraGridCardEditor);
+
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "reolink-camera-grid-card",

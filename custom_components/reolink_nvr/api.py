@@ -231,7 +231,7 @@ class ReolinkNvrApi:
             await self._discover_channel_essentials(ch)
 
     async def _fetch_channel_abilities(self) -> None:
-        """Fetch GetAbility once to detect per-channel PTZ support."""
+        """Fetch GetAbility once to detect per-channel PTZ and doorbell support."""
         try:
             result = await self._api_call(
                 "GetAbility", {"User": {"userName": self._username}}
@@ -247,6 +247,9 @@ class ReolinkNvrApi:
                 else:
                     self.channels[idx].ptz_supported = False
                     self.channels[idx].ptz_presets = {}
+                # Doorbell detection
+                doorbell_light = ch_ab.get("supportDoorbellLight", {})
+                self.channels[idx].is_doorbell = doorbell_light.get("ver", 0) > 0
         except Exception:
             _LOGGER.debug("Could not fetch channel abilities", exc_info=True)
 
@@ -369,6 +372,9 @@ class ReolinkNvrApi:
                     state["vehicle"] = ai["vehicle"].get("alarm_state", 0) == 1
                 if ch_info.ai_pet and isinstance(ai.get("dog_cat"), dict):
                     state["pet"] = ai["dog_cat"].get("alarm_state", 0) == 1
+                # Doorbell ring — exposed as 'visitor' on supported cameras
+                if ch_info.is_doorbell and isinstance(ai.get("visitor"), dict):
+                    state["doorbell"] = ai["visitor"].get("alarm_state", 0) == 1
             except Exception:
                 pass
 
@@ -451,6 +457,9 @@ class ChannelInfo:
         self.ptz_supported: bool = False
         self.ptz_presets: dict[int, str] = {}
 
+        # Doorbell
+        self.is_doorbell: bool = False
+
         # IR lights
         self.has_ir: bool = False
         self.ir_state: str = "Auto"
@@ -473,6 +482,7 @@ class ChannelInfo:
             "volume": self.volume,
             "ptz_supported": self.ptz_supported,
             "ptz_presets": {str(k): v for k, v in self.ptz_presets.items()},
+            "is_doorbell": self.is_doorbell,
             "has_ir": self.has_ir,
             "ir_state": self.ir_state,
             "extras_discovered": self._extras_discovered,
@@ -495,6 +505,7 @@ class ChannelInfo:
         info.volume = data.get("volume", 100)
         info.ptz_supported = data.get("ptz_supported", False)
         info.ptz_presets = {int(k): v for k, v in data.get("ptz_presets", {}).items()}
+        info.is_doorbell = data.get("is_doorbell", False)
         info.has_ir = data.get("has_ir", False)
         info.ir_state = data.get("ir_state", "Auto")
         info._extras_discovered = data.get("extras_discovered", False)
