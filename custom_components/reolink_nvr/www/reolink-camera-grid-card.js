@@ -57,6 +57,11 @@ class ReolinkCameraGridCard extends LitElement {
     this.config = {
       columns: 0,
       show_motion_indicator: true,
+      allow_fullscreen: true,
+      show_name: true,
+      padding: 4,
+      gap: 4,
+      aspect_ratio: "16/9",
       cameras: [],
       ...config,
     };
@@ -99,6 +104,22 @@ class ReolinkCameraGridCard extends LitElement {
 
   _isMotionDetected(cameraEntityId) {
     if (!this.config.show_motion_indicator || !this.hass) return false;
+    // Primary: match by channel attribute
+    const camState = this.hass.states[cameraEntityId];
+    if (camState && camState.attributes && camState.attributes.channel !== undefined) {
+      const ch = camState.attributes.channel;
+      for (const [entityId, entityState] of Object.entries(this.hass.states)) {
+        if (
+          entityId.startsWith("binary_sensor.") &&
+          entityState.attributes &&
+          entityState.attributes.device_class === "motion" &&
+          entityState.attributes.channel === ch
+        ) {
+          return entityState.state === "on";
+        }
+      }
+    }
+    // Fallback: entity_id pattern matching
     const base = cameraEntityId.replace("camera.", "");
     const pattern = base.replace("_camera", "");
     for (const [entityId, entityState] of Object.entries(this.hass.states)) {
@@ -121,6 +142,7 @@ class ReolinkCameraGridCard extends LitElement {
   }
 
   _handleCameraClick(entityId) {
+    if (!this.config.allow_fullscreen) return;
     this._expandedCamera = entityId;
   }
 
@@ -153,11 +175,15 @@ class ReolinkCameraGridCard extends LitElement {
             </div>
             <reolink-camera-card
               .hass=${this.hass}
-              .config=${{
+              .config=${
+                {
                 entity: this._expandedCamera,
-                ptz: true,
-                show_motion_indicator: true,
-                show_microphone: true,
+                ptz: this.config.ptz !== false,
+                show_motion_indicator: this.config.show_motion_indicator !== false,
+                show_microphone: this.config.show_microphone !== false,
+                show_audio: this.config.show_audio !== false,
+                show_header: this.config.show_header !== false,
+                show_fullscreen: this.config.show_fullscreen !== false,
               }}
             ></reolink-camera-card>
           </div>
@@ -167,25 +193,28 @@ class ReolinkCameraGridCard extends LitElement {
 
     // Grid view
     const cols = this._getColumns();
+    const gridPad = `${this.config.padding}px`;
+    const gridGap = `${this.config.gap}px`;
 
     return html`
       <ha-card>
-        <div class="grid" style="grid-template-columns: repeat(${cols}, 1fr);">
+        <div class="grid" style="grid-template-columns: repeat(${cols}, 1fr); padding: ${gridPad}; gap: ${gridGap};">
           ${cameras.map(
             (entityId) => html`
               <div
                 class="grid-cell ${this._isMotionDetected(entityId)
                   ? "motion"
-                  : ""}"
+                  : ""} ${this.config.allow_fullscreen ? "clickable" : ""}"
                 @click=${() => this._handleCameraClick(entityId)}
               >
-                <div class="cell-video">
+                <div class="cell-video" style="aspect-ratio: ${this.config.aspect_ratio};">
                   <ha-camera-stream
                     .hass=${this.hass}
                     .stateObj=${this.hass.states[entityId]}
                     muted
                   ></ha-camera-stream>
                 </div>
+                ${this.config.show_name ? html`
                 <div class="cell-footer">
                   <span class="cell-name"
                     >${this._getCameraName(entityId)}</span
@@ -194,6 +223,11 @@ class ReolinkCameraGridCard extends LitElement {
                     ? html`<span class="cell-motion-badge">Motion</span>`
                     : ""}
                 </div>
+                ` : this._isMotionDetected(entityId) ? html`
+                <div class="cell-motion-overlay">
+                  <span class="cell-motion-badge">Motion</span>
+                </div>
+                ` : ""}
               </div>
             `
           )}
@@ -214,8 +248,6 @@ class ReolinkCameraGridCard extends LitElement {
 
       .grid {
         display: grid;
-        gap: 4px;
-        padding: 4px;
       }
 
       .grid-cell {
@@ -223,11 +255,14 @@ class ReolinkCameraGridCard extends LitElement {
         border-radius: 8px;
         overflow: hidden;
         background: #000;
-        cursor: pointer;
         transition: transform 0.15s, box-shadow 0.15s;
       }
 
-      .grid-cell:hover {
+      .grid-cell.clickable {
+        cursor: pointer;
+      }
+
+      .grid-cell.clickable:hover {
         transform: scale(1.02);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
@@ -241,7 +276,6 @@ class ReolinkCameraGridCard extends LitElement {
       }
 
       .cell-video {
-        aspect-ratio: 16 / 9;
         overflow: hidden;
       }
 
@@ -278,6 +312,12 @@ class ReolinkCameraGridCard extends LitElement {
         text-transform: uppercase;
         animation: pulse 1.5s ease-in-out infinite;
         flex-shrink: 0;
+      }
+
+      .cell-motion-overlay {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
       }
 
       @keyframes pulse {
@@ -355,6 +395,40 @@ class ReolinkCameraGridCardEditor extends LitElement {
         selector: { boolean: {} },
       },
       {
+        name: "allow_fullscreen",
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_name",
+        selector: { boolean: {} },
+      },
+      {
+        name: "padding",
+        selector: {
+          number: { min: 0, max: 32, mode: "box", unit_of_measurement: "px" },
+        },
+      },
+      {
+        name: "gap",
+        selector: {
+          number: { min: 0, max: 32, mode: "box", unit_of_measurement: "px" },
+        },
+      },
+      {
+        name: "aspect_ratio",
+        selector: {
+          select: {
+            options: [
+              { value: "16/9", label: "16:9" },
+              { value: "4/3", label: "4:3" },
+              { value: "1/1", label: "1:1" },
+              { value: "21/9", label: "21:9" },
+            ],
+            custom_value: true,
+          },
+        },
+      },
+      {
         name: "cameras",
         selector: {
           entity: { domain: "camera", multiple: true },
@@ -369,6 +443,11 @@ class ReolinkCameraGridCardEditor extends LitElement {
     const data = {
       columns: this._config.columns || 0,
       show_motion_indicator: this._config.show_motion_indicator !== false,
+      allow_fullscreen: this._config.allow_fullscreen !== false,
+      show_name: this._config.show_name !== false,
+      padding: this._config.padding ?? 4,
+      gap: this._config.gap ?? 4,
+      aspect_ratio: this._config.aspect_ratio || "16/9",
       cameras: this._config.cameras || [],
     };
 
@@ -381,6 +460,11 @@ class ReolinkCameraGridCardEditor extends LitElement {
           const labels = {
             columns: "Columns (0 = auto)",
             show_motion_indicator: "Show Motion Indicator",
+            allow_fullscreen: "Allow Fullscreen on Tap",
+            show_name: "Show Camera Name",
+            padding: "Padding",
+            gap: "Gap Between Cells",
+            aspect_ratio: "Aspect Ratio",
             cameras: "Cameras (empty = auto-discover)",
           };
           return labels[s.name] || s.name;

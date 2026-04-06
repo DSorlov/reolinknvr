@@ -6,7 +6,7 @@ A lean, NVR-focused Home Assistant integration for **Reolink RLN36** and family.
 
 - **WebRTC streaming** with go2rtc — sub-stream by default for low bandwidth
 - **Two-way audio** — talk to cameras from the HA dashboard
-- **Real-time NVR events** — motion, person, vehicle, pet, doorbell as automation triggers
+- **Real-time NVR events** — motion, person, vehicle, pet, doorbell as automation triggers (polling-based)
 - **PTZ controls** — full directional, zoom, presets, and patrol
 - **Custom touch-friendly cards** — camera card with PTZ overlay, NVR grid card, PTZ card feature
 

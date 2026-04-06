@@ -85,6 +85,9 @@ class ReolinkCameraCard extends LitElement {
       ptz: true,
       show_motion_indicator: true,
       show_microphone: true,
+      show_audio: true,
+      show_header: true,
+      show_fullscreen: true,
       ...config,
     };
   }
@@ -111,16 +114,23 @@ class ReolinkCameraCard extends LitElement {
 
   get _motionDetected() {
     if (!this.hass || !this.config.show_motion_indicator) return false;
-    // Look for a matching motion binary sensor
+    // Primary: match by channel attribute (reliable)
+    const camState = this._stateObj;
+    if (camState && camState.attributes && camState.attributes.channel !== undefined) {
+      const ch = camState.attributes.channel;
+      for (const [entityId, entityState] of Object.entries(this.hass.states)) {
+        if (
+          entityId.startsWith("binary_sensor.") &&
+          entityState.attributes &&
+          entityState.attributes.device_class === "motion" &&
+          entityState.attributes.channel === ch
+        ) {
+          return entityState.state === "on";
+        }
+      }
+    }
+    // Fallback: entity_id pattern matching
     const base = this.config.entity.replace("camera.", "");
-    const motionEntity = `binary_sensor.${base}_motion`.replace(
-      "_camera_",
-      "_"
-    );
-    // Try direct match first
-    const state = this.hass.states[motionEntity];
-    if (state) return state.state === "on";
-    // Search for any motion sensor matching pattern
     const pattern = base.replace("_camera", "");
     for (const [entityId, entityState] of Object.entries(this.hass.states)) {
       if (
@@ -331,6 +341,7 @@ class ReolinkCameraCard extends LitElement {
           @touchend=${this._handleTouchEnd}
         >
           <!-- Header bar -->
+          ${this.config.show_header ? html`
           <div class="header">
             <span class="camera-name">${this._cameraName}</span>
             <div class="header-badges">
@@ -345,6 +356,7 @@ class ReolinkCameraCard extends LitElement {
               </span>
             </div>
           </div>
+          ` : ""}
 
           <!-- Video -->
           <div
@@ -363,6 +375,7 @@ class ReolinkCameraCard extends LitElement {
           <div class="controls-overlay">
             <!-- Left controls -->
             <div class="controls-left">
+              ${this.config.show_audio ? html`
               <button
                 class="control-btn speaker-btn ${this._audioMuted
                   ? ""
@@ -376,6 +389,7 @@ class ReolinkCameraCard extends LitElement {
                     : "mdi:volume-high"}
                 ></ha-icon>
               </button>
+              ` : ""}
               ${showMic
                 ? html`
                     <button
@@ -393,6 +407,7 @@ class ReolinkCameraCard extends LitElement {
                     </button>
                   `
                 : ""}
+              ${this.config.show_fullscreen ? html`
               <button
                 class="control-btn"
                 @click=${this._toggleFullscreen}
@@ -404,6 +419,7 @@ class ReolinkCameraCard extends LitElement {
                     : "mdi:fullscreen"}
                 ></ha-icon>
               </button>
+              ` : ""}
               ${this._scale > 1.1
                 ? html`
                     <button
@@ -779,6 +795,18 @@ class ReolinkCameraCardEditor extends LitElement {
         name: "show_microphone",
         selector: { boolean: {} },
       },
+      {
+        name: "show_audio",
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_header",
+        selector: { boolean: {} },
+      },
+      {
+        name: "show_fullscreen",
+        selector: { boolean: {} },
+      },
     ];
   }
 
@@ -790,6 +818,9 @@ class ReolinkCameraCardEditor extends LitElement {
       ptz: this._config.ptz !== false,
       show_motion_indicator: this._config.show_motion_indicator !== false,
       show_microphone: this._config.show_microphone !== false,
+      show_audio: this._config.show_audio !== false,
+      show_header: this._config.show_header !== false,
+      show_fullscreen: this._config.show_fullscreen !== false,
     };
 
     return html`
@@ -803,6 +834,9 @@ class ReolinkCameraCardEditor extends LitElement {
             ptz: "Show PTZ Controls",
             show_motion_indicator: "Show Motion Indicator",
             show_microphone: "Show Microphone Button",
+            show_audio: "Show Audio Toggle",
+            show_header: "Show Header Bar",
+            show_fullscreen: "Show Fullscreen Button",
           };
           return labels[s.name] || s.name;
         }}

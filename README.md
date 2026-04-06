@@ -10,12 +10,11 @@ A lean, NVR-focused Home Assistant custom integration for **Reolink RLN36** and 
 
 - **WebRTC streaming** — Sub-stream by default (~512 kbps) for low bandwidth; switch to main stream on demand. Powered by Home Assistant's built-in go2rtc (zero-config WebRTC with ~0.5 s latency).
 - **Two-way audio** — Microphone button in the custom camera card streams your voice to the camera speaker via go2rtc's RTSP backchannel (requires HA over HTTPS).
-- **NVR events as HA triggers** — Motion, person, vehicle, pet, and doorbell detections fire `reolink_nvr_event` events. Use them in automations. Real-time via Baichuan TCP push with polling fallback.
+- **NVR events as HA triggers** — Motion, person, vehicle, pet, and doorbell detections fire `reolink_nvr_event` events. Use them in automations. State changes detected via polling.
 - **PTZ controls** — Directional buttons, zoom, presets, patrol toggle, and speed control for PTZ-capable cameras.
 - **Custom Lovelace cards** — Touch-friendly camera card with PTZ overlay and mic, NVR grid card, and a compact PTZ card feature for tile/entity cards.
 - **Multi-NVR support** — Add as many Reolink NVRs as you need, each as a separate config entry.
 - **Speaker volume control** — Adjust camera speaker volume for two-way audio.
-- **IR lights toggle** — Turn infrared LEDs on/off per camera channel.
 
 ## Supported Models
 
@@ -25,7 +24,7 @@ A lean, NVR-focused Home Assistant custom integration for **Reolink RLN36** and 
 | RLN16     | 16       | ✅ Expected to work |
 | RLN8      | 8        | ✅ Expected to work |
 
-Any Reolink NVR supported by the [reolink-aio](https://github.com/starkillerOG/reolink_aio) library should work.
+Any Reolink NVR with an HTTP API (JSON over HTTPS) should work. This integration uses a custom direct HTTP API client — no third-party libraries required.
 
 ## Installation
 
@@ -53,10 +52,10 @@ Any Reolink NVR supported by the [reolink-aio](https://github.com/starkillerOG/r
 2. Search for **Reolink NVR**.
 3. Enter your NVR connection details:
    - **Host**: IP address or hostname of the NVR
-   - **Port**: HTTP port (default: 80)
+   - **Port**: HTTP/HTTPS port (default: 443)
    - **Username**: Admin username
    - **Password**: Password (max 31 characters — [Reolink firmware limitation](https://github.com/home-assistant/core/issues/139710))
-   - **Use HTTPS**: Toggle if your NVR requires HTTPS
+   - **Use HTTPS**: Toggle if your NVR requires HTTPS (enabled by default)
 4. Click **Submit**. The integration will connect, discover all camera channels, and create entities.
 
 ### Options
@@ -66,7 +65,7 @@ After setup, click **Configure** on the integration to adjust:
 | Option | Default | Description |
 |--------|---------|-------------|
 | **Default stream quality** | `sub` | `sub` (low bandwidth ~512 kbps) or `main` (full quality) |
-| **Polling interval** | 60 s | How often to poll NVR state (in addition to real-time push events) |
+| **Polling interval** | 60 s | How often to poll NVR state |
 
 ## Entities Created
 
@@ -86,7 +85,6 @@ For each connected camera channel on the NVR:
 | `number` | Speaker Volume | Camera speaker volume 0–100 *(cameras with speaker only)* |
 | `select` | PTZ Preset | Move to a saved PTZ preset position *(PTZ cameras only)* |
 | `switch` | PTZ Patrol | Toggle automatic PTZ patrol *(PTZ cameras only)* |
-| `switch` | IR Lights | Toggle infrared LEDs on/off |
 
 ## Custom Lovelace Cards
 
@@ -102,6 +100,9 @@ entity: camera.reolink_nvr_my_nvr_ch01_sub
 ptz: true
 show_motion_indicator: true
 show_microphone: true
+show_audio: true
+show_header: true
+show_fullscreen: true
 ```
 
 **Touch gestures:**
@@ -118,6 +119,11 @@ Grid showing all NVR camera channels. Tap a cell to expand to the full camera ca
 type: custom:reolink-camera-grid-card
 columns: 3
 show_motion_indicator: true
+allow_fullscreen: true
+show_name: true
+padding: 4
+gap: 4
+aspect_ratio: "16/9"
 ```
 
 Set `columns: 0` for auto-sizing (2 on phone, 3–4 on tablet).
@@ -163,7 +169,7 @@ trigger:
 
 - **Home Assistant** 2024.11.0 or newer (go2rtc built-in)
 - **HACS** installed for easy installation
-- **Network**: NVR must be reachable from HA on ports 80 (HTTP), 554 (RTSP), and optionally 9000 (Baichuan push)
+- **Network**: NVR must be reachable from HA on ports 80/443 (HTTP/HTTPS) and 554 (RTSP)
 - **HTTPS on HA** required for two-way audio (browser microphone needs secure context)
 - **NVR password** must be 31 characters or fewer
 
@@ -171,8 +177,8 @@ trigger:
 
 ### Cannot connect to NVR
 
-- Verify the NVR IP address and port (default 80).
-- Ensure HA can reach the NVR on ports 80, 554, and 9000.
+- Verify the NVR IP address and port (default 443 for HTTPS).
+- Ensure HA can reach the NVR on ports 80/443 and 554.
 - Try toggling the **Use HTTPS** option.
 
 ### Invalid authentication

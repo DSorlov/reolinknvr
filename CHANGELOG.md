@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-06
+
+### Fixed
+
+- Motion indicator badge in camera card and grid card now works reliably. Binary sensors expose `channel` as a state attribute, and JS cards match motion sensors by channel instead of fragile entity_id pattern matching.
+- README removed false claims about reolink-aio, Baichuan TCP push, IR lights toggle, and wrong default port.
+- info.md corrected "Real-time NVR events" to note polling-based detection.
+
+### Added
+
+- **Camera card**: New config options `show_audio`, `show_header`, `show_fullscreen` to toggle audio button, header bar, and fullscreen button independently (all default to `true`).
+- **Grid card**: New `allow_fullscreen` option to disable tap-to-expand (default `true`).
+- **Grid card**: Configurable `padding`, `gap` (px), `aspect_ratio` (e.g. "16/9", "4/3"), and `show_name` for cell styling.
+- **Grid card**: Expanded camera view now inherits grid card's config options (PTZ, audio, microphone, header, fullscreen) instead of hardcoding them.
+
 ## [1.1.8] - 2026-04-06
 
 ### Fixed

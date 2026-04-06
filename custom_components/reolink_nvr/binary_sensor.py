@@ -102,6 +102,11 @@ class ReolinkNvrBinarySensor(ReolinkNvrEntity, BinarySensorEntity):
         self._attr_unique_id = f"{coordinator.nvr_serial}_{channel}_{description.key}"
 
     @property
+    def extra_state_attributes(self) -> dict[str, int]:
+        """Expose the NVR channel index so frontend cards can match sensors."""
+        return {"channel": self._channel}
+
+    @property
     def is_on(self) -> bool | None:
         """Return True if the sensor detects something."""
         data = self.coordinator.data
